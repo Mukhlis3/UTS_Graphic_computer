@@ -1,0 +1,191 @@
+unit Unit1;
+
+{$mode objfpc}{$H+}
+
+interface
+
+uses
+  Classes, SysUtils, Forms, Controls, Graphics, Dialogs, StdCtrls, ExtCtrls;
+
+const
+  SnakeSize = 20;  // Ukuran setiap segmen ular
+  InitialSnakeLength = 3;  // Panjang awal ular
+  GameAreaSize = 200;  // Ukuran area permainan (kotak persegi)
+
+type
+  // Deklarasi tipe arah ular
+  TSnakeDirection = (sdUp, sdDown, sdLeft, sdRight);
+
+  { TForm1 }
+
+  TForm1 = class(TForm)
+    BtnUp: TButton;
+    BtnDown: TButton;
+    BtnLeft: TButton;
+    BtnRight: TButton;
+    BtnExit: TButton;
+    BtnStart: TButton;
+    BtnStop: TButton;  // Tombol untuk pause
+    BtnUlti: TButton;
+    Timer1: TTimer;
+    procedure BtnExitClick(Sender: TObject);
+    procedure BtnStartClick(Sender: TObject);
+    procedure BtnUpClick(Sender: TObject);
+    procedure BtnDownClick(Sender: TObject);
+    procedure BtnLeftClick(Sender: TObject);
+    procedure BtnRightClick(Sender: TObject);
+    procedure BtnStopClick(Sender: TObject);  // Untuk pause dan resume
+    procedure BtnUltiClick(Sender: TObject);
+    procedure FormCreate(Sender: TObject);
+    procedure Timer1Timer(Sender: TObject);
+    procedure FormPaint(Sender: TObject);  // Untuk menggambar ulang form
+  private
+    Snake: array of TPoint;  // Untuk menyimpan posisi ular
+    SnakeDirection: TSnakeDirection;  // Arah ular
+    GamePaused: Boolean;  // Status apakah game sedang pause
+    procedure MoveSnake;  // Prosedur untuk menggerakkan ular
+    procedure ResetGame;  // Prosedur untuk mereset permainan
+  end;
+
+var
+  Form1: TForm1;
+  GameAreaRect: TRect;  // Area permainan (batas kotak)
+
+implementation
+
+{$R *.lfm}
+
+{ TForm1 }
+
+procedure TForm1.FormCreate(Sender: TObject);
+begin
+  // Inisialisasi permainan saat form dibuat
+  Timer1.Interval := 200;  // Kecepatan ular
+  Timer1.Enabled := False;  // Timer tidak aktif saat awal
+  GamePaused := False;  // Awalnya game tidak dalam status pause
+  GameAreaRect := Rect((ClientWidth - GameAreaSize) div 2, (ClientHeight - GameAreaSize) div 2,
+                       (ClientWidth + GameAreaSize) div 2, (ClientHeight + GameAreaSize) div 2);
+  ResetGame;  // Inisialisasi ulang permainan
+end;
+
+procedure TForm1.ResetGame;
+begin
+  // Reset panjang dan posisi ular
+  SetLength(Snake, InitialSnakeLength);  // Atur panjang awal ular
+  Snake[0].X := GameAreaRect.Left + 50;  // Posisi awal kepala ular (di dalam kotak)
+  Snake[0].Y := GameAreaRect.Top + 50;   // Posisi awal kepala ular (di dalam kotak)
+
+  // Atur segmen-segmen tubuh ular di belakang kepala
+  Snake[1].X := Snake[0].X - SnakeSize;
+  Snake[1].Y := Snake[0].Y;
+  Snake[2].X := Snake[1].X - SnakeSize;
+  Snake[2].Y := Snake[1].Y;
+
+  SnakeDirection := sdRight;  // Arah awal ular
+  Invalidate;  // Render ulang tampilan form
+end;
+
+procedure TForm1.MoveSnake;
+var
+  i: Integer;
+  NextPos: TPoint;
+begin
+  // Gerakkan setiap bagian tubuh mengikuti kepala
+  for i := High(Snake) downto 1 do
+    Snake[i] := Snake[i-1];
+
+  // Tentukan posisi berikutnya berdasarkan arah
+  NextPos := Snake[0];
+  case SnakeDirection of
+    sdUp: Dec(NextPos.Y, SnakeSize);
+    sdDown: Inc(NextPos.Y, SnakeSize);
+    sdLeft: Dec(NextPos.X, SnakeSize);
+    sdRight: Inc(NextPos.X, SnakeSize);
+  end;
+
+  Snake[0] := NextPos;  // Update posisi kepala ular
+
+  Invalidate;  // Render ulang tampilan ular
+end;
+
+procedure TForm1.BtnUpClick(Sender: TObject);
+begin
+  if SnakeDirection <> sdDown then
+    SnakeDirection := sdUp;
+end;
+
+procedure TForm1.BtnDownClick(Sender: TObject);
+begin
+  if SnakeDirection <> sdUp then
+    SnakeDirection := sdDown;
+end;
+
+procedure TForm1.BtnLeftClick(Sender: TObject);
+begin
+  if SnakeDirection <> sdRight then
+    SnakeDirection := sdLeft;
+end;
+
+procedure TForm1.BtnRightClick(Sender: TObject);
+begin
+  if SnakeDirection <> sdLeft then
+    SnakeDirection := sdRight;
+end;
+
+procedure TForm1.BtnStopClick(Sender: TObject);
+begin
+  // Logika untuk pause atau resume permainan
+  if GamePaused then
+  begin
+    Timer1.Enabled := True;  // Resume permainan
+    BtnStop.Caption := 'Pause';  // Ubah teks tombol
+    GamePaused := False;
+  end
+  else
+  begin
+    Timer1.Enabled := False;  // Pause permainan
+    BtnStop.Caption := 'Resume';  // Ubah teks tombol
+    GamePaused := True;
+  end;
+end;
+
+procedure TForm1.BtnUltiClick(Sender: TObject);
+begin
+
+end;
+
+procedure TForm1.BtnExitClick(Sender: TObject);
+begin
+  Application.Terminate;  // Keluar dari aplikasi saat tombol Exit diklik
+end;
+
+procedure TForm1.BtnStartClick(Sender: TObject);
+begin
+  ResetGame;  // Reset posisi ular
+  Timer1.Enabled := True;  // Aktifkan timer untuk memulai permainan
+  BtnStop.Caption := 'Pause';  // Pastikan teks tombol diatur menjadi 'Pause'
+  GamePaused := False;  // Pastikan game tidak dalam status pause
+end;
+
+procedure TForm1.Timer1Timer(Sender: TObject);
+begin
+  if not GamePaused then
+    MoveSnake;  // Panggil prosedur untuk menggerakkan ular
+end;
+
+procedure TForm1.FormPaint(Sender: TObject);
+var
+  i: Integer;
+begin
+  // Menggambar area permainan (batas kotak)
+  Canvas.Pen.Color := clBlack;
+  Canvas.Pen.Width := 3;
+  Canvas.Brush.Style := bsClear;  // Pastikan kotak tidak diisi
+
+  // Menggambar ular
+  Canvas.Brush.Color := clGreen;
+  for i := Low(Snake) to High(Snake) do
+    Canvas.FillRect(Snake[i].X, Snake[i].Y, Snake[i].X + SnakeSize, Snake[i].Y + SnakeSize);
+end;
+
+end.
